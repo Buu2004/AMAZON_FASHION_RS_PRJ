@@ -1,0 +1,718 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Theodore John">Theodore John</option>
+                                
+                                    <option value="CAROL">CAROL</option>
+                                
+                                    <option value="Dawn Babineaux">Dawn Babineaux</option>
+                                
+                                    <option value="Carolynmlubbe">Carolynmlubbe</option>
+                                
+                                    <option value="Rebecca M Overbay">Rebecca M Overbay</option>
+                                
+                                    <option value="Kristi Brown">Kristi Brown</option>
+                                
+                                    <option value="Joni">Joni</option>
+                                
+                                    <option value="Larry Du Bois">Larry Du Bois</option>
+                                
+                                    <option value="lara weber">lara weber</option>
+                                
+                                    <option value="Constance J Tomazic">Constance J Tomazic</option>
+                                
+                                    <option value="Mare">Mare</option>
+                                
+                                    <option value="Debbie Accardo">Debbie Accardo</option>
+                                
+                                    <option value="DumDum">DumDum</option>
+                                
+                                    <option value="Linda Staaf">Linda Staaf</option>
+                                
+                                    <option value="J.G.">J.G.</option>
+                                
+                                    <option value="Angie Qualls">Angie Qualls</option>
+                                
+                                    <option value="BB">BB</option>
+                                
+                                    <option value="Karol C. Mannherz">Karol C. Mannherz</option>
+                                
+                                    <option value="Robin Howard">Robin Howard</option>
+                                
+                                    <option value="Amazon Customer">Amazon Customer</option>
+                                
+                                    <option value="michael p woodland">michael p woodland</option>
+                                
+                                    <option value="yolanda hernandez">yolanda hernandez</option>
+                                
+                                    <option value="Winnie">Winnie</option>
+                                
+                                    <option value="melissa gelb">melissa gelb</option>
+                                
+                                    <option value="Jane H. McGarity">Jane H. McGarity</option>
+                                
+                                    <option value="Pat">Pat</option>
+                                
+                                    <option value="sherry millican">sherry millican</option>
+                                
+                                    <option value="Angel3954">Angel3954</option>
+                                
+                                    <option value="Beryl Blessing">Beryl Blessing</option>
+                                
+                                    <option value="Pearl Hodge">Pearl Hodge</option>
+                                
+                                    <option value="Chip">Chip</option>
+                                
+                                    <option value="Ann H.">Ann H.</option>
+                                
+                                    <option value="Mark St">Mark St</option>
+                                
+                                    <option value="John killmore">John killmore</option>
+                                
+                                    <option value="Patty Church">Patty Church</option>
+                                
+                                    <option value="Brebojack">Brebojack</option>
+                                
+                                    <option value="JW">JW</option>
+                                
+                                    <option value="BTDoxies">BTDoxies</option>
+                                
+                                    <option value="Joanne Mckenna Simoneau">Joanne Mckenna Simoneau</option>
+                                
+                                    <option value="Maria T Franklin">Maria T Franklin</option>
+                                
+                                    <option value="Jeanne G.">Jeanne G.</option>
+                                
+                                    <option value="Diana D.">Diana D.</option>
+                                
+                                    <option value="Ms Irish">Ms Irish</option>
+                                
+                                    <option value="kimberly a schotthoefer">kimberly a schotthoefer</option>
+                                
+                                    <option value="incognito">incognito</option>
+                                
+                                    <option value="Jacqueline Pendry">Jacqueline Pendry</option>
+                                
+                                    <option value="Lisa Grenier">Lisa Grenier</option>
+                                
+                                    <option value="rosieO">rosieO</option>
+                                
+                                    <option value="Daryl">Daryl</option>
+                                
+                                    <option value="REBECCA S LAYTON">REBECCA S LAYTON</option>
+                                
+                                    <option value="Paul A Ladd">Paul A Ladd</option>
+                                
+                                    <option value="Crist P">Crist P</option>
+                                
+                                    <option value="Kara Padgett">Kara Padgett</option>
+                                
+                                    <option value="Ruby A. Judy">Ruby A. Judy</option>
+                                
+                                    <option value="denise clark">denise clark</option>
+                                
+                                    <option value="Cindy Reaux">Cindy Reaux</option>
+                                
+                                    <option value="Adam Upson">Adam Upson</option>
+                                
+                                    <option value="SHERRI J">SHERRI J</option>
+                                
+                                    <option value="CLM">CLM</option>
+                                
+                                    <option value="Sonja Lau">Sonja Lau</option>
+                                
+                                    <option value="Danette">Danette</option>
+                                
+                                    <option value="Ann">Ann</option>
+                                
+                                    <option value="Debra McCarty">Debra McCarty</option>
+                                
+                                    <option value="Leslie Story">Leslie Story</option>
+                                
+                                    <option value="Julie B. Cannon">Julie B. Cannon</option>
+                                
+                                    <option value="Mrs.Dennis">Mrs.Dennis</option>
+                                
+                                    <option value="gallina">gallina</option>
+                                
+                                    <option value="Ann Bishop">Ann Bishop</option>
+                                
+                                    <option value="Darrow H Ankrum II">Darrow H Ankrum II</option>
+                                
+                                    <option value="Carlene Humphreys">Carlene Humphreys</option>
+                                
+                                    <option value="karen puckett">karen puckett</option>
+                                
+                                    <option value="alice">alice</option>
+                                
+                                    <option value="luv2sing">luv2sing</option>
+                                
+                                    <option value="M. Waltman">M. Waltman</option>
+                                
+                                    <option value="Sarah13">Sarah13</option>
+                                
+                                    <option value="YaYa">YaYa</option>
+                                
+                                    <option value="stacey echols">stacey echols</option>
+                                
+                                    <option value="Jules">Jules</option>
+                                
+                                    <option value="NBJ">NBJ</option>
+                                
+                                    <option value="David Edwards">David Edwards</option>
+                                
+                                    <option value="sandi">sandi</option>
+                                
+                                    <option value="yolanda">yolanda</option>
+                                
+                                    <option value="Debra Humphreys">Debra Humphreys</option>
+                                
+                                    <option value="Susan">Susan</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Theodore John", "label": "Theodore John", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CAROL", "label": "CAROL", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dawn Babineaux", "label": "Dawn Babineaux", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Carolynmlubbe", "label": "Carolynmlubbe", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rebecca M Overbay", "label": "Rebecca M Overbay", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kristi Brown", "label": "Kristi Brown", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Joni", "label": "Joni", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Larry Du Bois", "label": "Larry Du Bois", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "lara weber", "label": "lara weber", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Constance J Tomazic", "label": "Constance J Tomazic", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mare", "label": "Mare", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Debbie Accardo", "label": "Debbie Accardo", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DumDum", "label": "DumDum", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Linda Staaf", "label": "Linda Staaf", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "J.G.", "label": "J.G.", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Angie Qualls", "label": "Angie Qualls", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BB", "label": "BB", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Karol C. Mannherz", "label": "Karol C. Mannherz", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Robin Howard", "label": "Robin Howard", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Amazon Customer", "label": "Amazon Customer", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "michael p woodland", "label": "michael p woodland", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yolanda hernandez", "label": "yolanda hernandez", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Winnie", "label": "Winnie", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "melissa gelb", "label": "melissa gelb", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jane H. McGarity", "label": "Jane H. McGarity", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pat", "label": "Pat", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "sherry millican", "label": "sherry millican", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Angel3954", "label": "Angel3954", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Beryl Blessing", "label": "Beryl Blessing", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pearl Hodge", "label": "Pearl Hodge", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chip", "label": "Chip", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ann H.", "label": "Ann H.", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mark St", "label": "Mark St", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "John killmore", "label": "John killmore", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Patty Church", "label": "Patty Church", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Brebojack", "label": "Brebojack", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "JW", "label": "JW", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BTDoxies", "label": "BTDoxies", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Joanne Mckenna Simoneau", "label": "Joanne Mckenna Simoneau", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maria T Franklin", "label": "Maria T Franklin", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jeanne G.", "label": "Jeanne G.", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Diana D.", "label": "Diana D.", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ms Irish", "label": "Ms Irish", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "kimberly a schotthoefer", "label": "kimberly a schotthoefer", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "incognito", "label": "incognito", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jacqueline Pendry", "label": "Jacqueline Pendry", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Lisa Grenier", "label": "Lisa Grenier", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "rosieO", "label": "rosieO", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Daryl", "label": "Daryl", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "REBECCA S LAYTON", "label": "REBECCA S LAYTON", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Paul A Ladd", "label": "Paul A Ladd", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Crist P", "label": "Crist P", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kara Padgett", "label": "Kara Padgett", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ruby A. Judy", "label": "Ruby A. Judy", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "denise clark", "label": "denise clark", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cindy Reaux", "label": "Cindy Reaux", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Adam Upson", "label": "Adam Upson", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "SHERRI J", "label": "SHERRI J", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CLM", "label": "CLM", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sonja Lau", "label": "Sonja Lau", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Danette", "label": "Danette", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ann", "label": "Ann", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Debra McCarty", "label": "Debra McCarty", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Leslie Story", "label": "Leslie Story", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Julie B. Cannon", "label": "Julie B. Cannon", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mrs.Dennis", "label": "Mrs.Dennis", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "gallina", "label": "gallina", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ann Bishop", "label": "Ann Bishop", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Darrow H Ankrum II", "label": "Darrow H Ankrum II", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Carlene Humphreys", "label": "Carlene Humphreys", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "karen puckett", "label": "karen puckett", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "alice", "label": "alice", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "luv2sing", "label": "luv2sing", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "M. Waltman", "label": "M. Waltman", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sarah13", "label": "Sarah13", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "YaYa", "label": "YaYa", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "stacey echols", "label": "stacey echols", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jules", "label": "Jules", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NBJ", "label": "NBJ", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "David Edwards", "label": "David Edwards", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "sandi", "label": "sandi", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yolanda", "label": "yolanda", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Debra Humphreys", "label": "Debra Humphreys", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Susan", "label": "Susan", "shape": "dot"}]);
+                  edges = new vis.DataSet([{"from": "gallina", "to": "YaYa", "width": 1}, {"from": "Ann Bishop", "to": "melissa gelb", "width": 1}, {"from": "stacey echols", "to": "Rebecca M Overbay", "width": 1}, {"from": "melissa gelb", "to": "Crist P", "width": 1}, {"from": "Cindy Reaux", "to": "Debbie Accardo", "width": 1}, {"from": "Carolynmlubbe", "to": "Jane H. McGarity", "width": 1}, {"from": "rosieO", "to": "Mark St", "width": 1}, {"from": "denise clark", "to": "alice", "width": 1}, {"from": "Kara Padgett", "to": "Rebecca M Overbay", "width": 1}, {"from": "DumDum", "to": "Patty Church", "width": 1}, {"from": "Ann H.", "to": "CAROL", "width": 1}, {"from": "Constance J Tomazic", "to": "SHERRI J", "width": 1}, {"from": "Jane H. McGarity", "to": "stacey echols", "width": 1}, {"from": "Ann Bishop", "to": "Paul A Ladd", "width": 1}, {"from": "Darrow H Ankrum II", "to": "Beryl Blessing", "width": 1}, {"from": "Dawn Babineaux", "to": "JW", "width": 1}, {"from": "Ms Irish", "to": "Dawn Babineaux", "width": 1}, {"from": "Ms Irish", "to": "Constance J Tomazic", "width": 1}, {"from": "Jeanne G.", "to": "Diana D.", "width": 1}, {"from": "karen puckett", "to": "Daryl", "width": 1}, {"from": "Sarah13", "to": "Karol C. Mannherz", "width": 1}, {"from": "gallina", "to": "melissa gelb", "width": 1}, {"from": "Darrow H Ankrum II", "to": "karen puckett", "width": 1}, {"from": "BTDoxies", "to": "Patty Church", "width": 1}, {"from": "BTDoxies", "to": "melissa gelb", "width": 1}, {"from": "Jacqueline Pendry", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "DumDum", "to": "Diana D.", "width": 1}, {"from": "Ann Bishop", "to": "Joni", "width": 1}, {"from": "gallina", "to": "sandi", "width": 1}, {"from": "J.G.", "to": "Amazon Customer", "width": 9}, {"from": "Carolynmlubbe", "to": "Beryl Blessing", "width": 1}, {"from": "Angel3954", "to": "Linda Staaf", "width": 1}, {"from": "Jules", "to": "Theodore John", "width": 1}, {"from": "M. Waltman", "to": "Larry Du Bois", "width": 1}, {"from": "Amazon Customer", "to": "CAROL", "width": 7}, {"from": "Debra Humphreys", "to": "Jane H. McGarity", "width": 1}, {"from": "Theodore John", "to": "Crist P", "width": 1}, {"from": "Constance J Tomazic", "to": "Mark St", "width": 1}, {"from": "M. Waltman", "to": "Maria T Franklin", "width": 1}, {"from": "Debra Humphreys", "to": "yolanda", "width": 1}, {"from": "gallina", "to": "Jane H. McGarity", "width": 1}, {"from": "YaYa", "to": "NBJ", "width": 1}, {"from": "Kristi Brown", "to": "Mare", "width": 1}, {"from": "Jacqueline Pendry", "to": "Adam Upson", "width": 1}, {"from": "Ms Irish", "to": "Patty Church", "width": 1}, {"from": "JW", "to": "incognito", "width": 1}, {"from": "Angie Qualls", "to": "Debra McCarty", "width": 1}, {"from": "Maria T Franklin", "to": "JW", "width": 1}, {"from": "Susan", "to": "incognito", "width": 1}, {"from": "Pearl Hodge", "to": "Brebojack", "width": 1}, {"from": "BTDoxies", "to": "Pearl Hodge", "width": 1}, {"from": "BB", "to": "alice", "width": 1}, {"from": "John killmore", "to": "luv2sing", "width": 1}, {"from": "Cindy Reaux", "to": "Brebojack", "width": 1}, {"from": "Larry Du Bois", "to": "sandi", "width": 1}, {"from": "Mark St", "to": "Danette", "width": 1}, {"from": "Angel3954", "to": "Daryl", "width": 1}, {"from": "JW", "to": "alice", "width": 1}, {"from": "Ms Irish", "to": "CAROL", "width": 1}, {"from": "CAROL", "to": "michael p woodland", "width": 1}, {"from": "sandi", "to": "Kristi Brown", "width": 1}, {"from": "Daryl", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "Daryl", "to": "Leslie Story", "width": 1}, {"from": "Jane H. McGarity", "to": "JW", "width": 1}, {"from": "J.G.", "to": "Susan", "width": 1}, {"from": "Jules", "to": "stacey echols", "width": 1}, {"from": "Pearl Hodge", "to": "incognito", "width": 1}, {"from": "David Edwards", "to": "CLM", "width": 1}, {"from": "Debbie Accardo", "to": "Debra McCarty", "width": 1}, {"from": "Jules", "to": "Paul A Ladd", "width": 1}, {"from": "Constance J Tomazic", "to": "alice", "width": 1}, {"from": "Joni", "to": "Sarah13", "width": 1}, {"from": "Debbie Accardo", "to": "Jeanne G.", "width": 1}, {"from": "Ann H.", "to": "JW", "width": 1}, {"from": "Joni", "to": "alice", "width": 1}, {"from": "Sarah13", "to": "Jacqueline Pendry", "width": 1}, {"from": "Sarah13", "to": "John killmore", "width": 1}, {"from": "M. Waltman", "to": "Joni", "width": 1}, {"from": "J.G.", "to": "Beryl Blessing", "width": 1}, {"from": "Joni", "to": "Chip", "width": 1}, {"from": "Debra Humphreys", "to": "Patty Church", "width": 1}, {"from": "Cindy Reaux", "to": "Beryl Blessing", "width": 1}, {"from": "Angel3954", "to": "Rebecca M Overbay", "width": 1}, {"from": "Constance J Tomazic", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "Sonja Lau", "to": "REBECCA S LAYTON", "width": 1}, {"from": "BB", "to": "CAROL", "width": 1}, {"from": "denise clark", "to": "YaYa", "width": 1}, {"from": "J.G.", "to": "Carlene Humphreys", "width": 1}, {"from": "rosieO", "to": "sherry millican", "width": 1}, {"from": "denise clark", "to": "NBJ", "width": 1}, {"from": "yolanda", "to": "lara weber", "width": 1}, {"from": "BB", "to": "Patty Church", "width": 1}, {"from": "JW", "to": "Ruby A. Judy", "width": 1}, {"from": "Constance J Tomazic", "to": "Mare", "width": 1}, {"from": "Debbie Accardo", "to": "Mrs.Dennis", "width": 1}, {"from": "Theodore John", "to": "Chip", "width": 1}, {"from": "Ms Irish", "to": "Ann", "width": 1}, {"from": "Leslie Story", "to": "Mrs.Dennis", "width": 1}, {"from": "Maria T Franklin", "to": "luv2sing", "width": 1}, {"from": "Ann Bishop", "to": "DumDum", "width": 1}, {"from": "Debbie Accardo", "to": "Rebecca M Overbay", "width": 1}, {"from": "Jules", "to": "yolanda", "width": 1}, {"from": "Darrow H Ankrum II", "to": "M. Waltman", "width": 1}, {"from": "Carolynmlubbe", "to": "Theodore John", "width": 1}, {"from": "Ann Bishop", "to": "Mare", "width": 1}, {"from": "Pat", "to": "Diana D.", "width": 1}, {"from": "Kristi Brown", "to": "Patty Church", "width": 1}, {"from": "Ann H.", "to": "Diana D.", "width": 1}, {"from": "Debbie Accardo", "to": "Diana D.", "width": 1}, {"from": "Dawn Babineaux", "to": "Chip", "width": 1}, {"from": "Robin Howard", "to": "YaYa", "width": 1}, {"from": "Kristi Brown", "to": "Beryl Blessing", "width": 1}, {"from": "Cindy Reaux", "to": "stacey echols", "width": 1}, {"from": "gallina", "to": "Amazon Customer", "width": 9}, {"from": "Linda Staaf", "to": "Daryl", "width": 1}, {"from": "BTDoxies", "to": "Susan", "width": 1}, {"from": "Mrs.Dennis", "to": "Adam Upson", "width": 1}, {"from": "Danette", "to": "Debra McCarty", "width": 1}, {"from": "Ann Bishop", "to": "Adam Upson", "width": 1}, {"from": "melissa gelb", "to": "SHERRI J", "width": 1}, {"from": "M. Waltman", "to": "Winnie", "width": 1}, {"from": "kimberly a schotthoefer", "to": "BB", "width": 1}, {"from": "yolanda hernandez", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "Paul A Ladd", "to": "Susan", "width": 1}, {"from": "Ms Irish", "to": "Angie Qualls", "width": 1}, {"from": "Ann Bishop", "to": "BB", "width": 1}, {"from": "Joni", "to": "Patty Church", "width": 1}, {"from": "Danette", "to": "Cindy Reaux", "width": 1}, {"from": "Ann", "to": "Jacqueline Pendry", "width": 1}, {"from": "JW", "to": "Crist P", "width": 1}, {"from": "Debra Humphreys", "to": "Dawn Babineaux", "width": 1}, {"from": "Debra Humphreys", "to": "Mare", "width": 1}, {"from": "Sarah13", "to": "Brebojack", "width": 1}, {"from": "Jules", "to": "Cindy Reaux", "width": 1}, {"from": "Jules", "to": "Carolynmlubbe", "width": 1}, {"from": "BTDoxies", "to": "luv2sing", "width": 1}, {"from": "J.G.", "to": "Mark St", "width": 1}, {"from": "Beryl Blessing", "to": "michael p woodland", "width": 1}, {"from": "Darrow H Ankrum II", "to": "Debra Humphreys", "width": 1}, {"from": "stacey echols", "to": "Larry Du Bois", "width": 1}, {"from": "Maria T Franklin", "to": "John killmore", "width": 1}, {"from": "Leslie Story", "to": "Lisa Grenier", "width": 1}, {"from": "Carolynmlubbe", "to": "CAROL", "width": 1}, {"from": "BB", "to": "YaYa", "width": 1}, {"from": "Lisa Grenier", "to": "Julie B. Cannon", "width": 1}, {"from": "gallina", "to": "Jules", "width": 1}, {"from": "Pat", "to": "Ann H.", "width": 1}, {"from": "Joni", "to": "melissa gelb", "width": 1}, {"from": "Carlene Humphreys", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "CAROL", "to": "Jeanne G.", "width": 1}, {"from": "Mark St", "to": "Karol C. Mannherz", "width": 1}, {"from": "Ann", "to": "Debra McCarty", "width": 1}, {"from": "SHERRI J", "to": "michael p woodland", "width": 1}, {"from": "Carolynmlubbe", "to": "Adam Upson", "width": 1}, {"from": "Angel3954", "to": "BB", "width": 1}, {"from": "yolanda hernandez", "to": "Carlene Humphreys", "width": 1}, {"from": "Kara Padgett", "to": "melissa gelb", "width": 1}, {"from": "BB", "to": "sandi", "width": 1}, {"from": "denise clark", "to": "sandi", "width": 1}, {"from": "Pat", "to": "Ann", "width": 1}, {"from": "Kara Padgett", "to": "Mrs.Dennis", "width": 1}, {"from": "BTDoxies", "to": "Amazon Customer", "width": 9}, {"from": "stacey echols", "to": "Jacqueline Pendry", "width": 1}, {"from": "Susan", "to": "Kristi Brown", "width": 1}, {"from": "Mark St", "to": "denise clark", "width": 1}, {"from": "Adam Upson", "to": "alice", "width": 1}, {"from": "kimberly a schotthoefer", "to": "luv2sing", "width": 1}, {"from": "J.G.", "to": "Kara Padgett", "width": 1}, {"from": "Daryl", "to": "Beryl Blessing", "width": 1}, {"from": "kimberly a schotthoefer", "to": "Beryl Blessing", "width": 1}, {"from": "Ann", "to": "Linda Staaf", "width": 1}, {"from": "Carlene Humphreys", "to": "Julie B. Cannon", "width": 1}, {"from": "Jules", "to": "Angel3954", "width": 1}, {"from": "Carolynmlubbe", "to": "NBJ", "width": 1}, {"from": "Sarah13", "to": "DumDum", "width": 1}, {"from": "Daryl", "to": "Julie B. Cannon", "width": 1}, {"from": "karen puckett", "to": "Kara Padgett", "width": 1}, {"from": "Paul A Ladd", "to": "Rebecca M Overbay", "width": 1}, {"from": "kimberly a schotthoefer", "to": "incognito", "width": 1}, {"from": "yolanda", "to": "michael p woodland", "width": 1}, {"from": "Mark St", "to": "Adam Upson", "width": 1}, {"from": "Ann", "to": "Julie B. Cannon", "width": 1}, {"from": "Kara Padgett", "to": "Brebojack", "width": 1}, {"from": "michael p woodland", "to": "Diana D.", "width": 1}, {"from": "BTDoxies", "to": "Leslie Story", "width": 1}, {"from": "Pat", "to": "CAROL", "width": 1}, {"from": "Angie Qualls", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "Pat", "to": "Kristi Brown", "width": 1}, {"from": "Jeanne G.", "to": "SHERRI J", "width": 1}, {"from": "Jeanne G.", "to": "Ruby A. Judy", "width": 1}, {"from": "Linda Staaf", "to": "Rebecca M Overbay", "width": 1}, {"from": "Daryl", "to": "michael p woodland", "width": 1}, {"from": "kimberly a schotthoefer", "to": "Debra Humphreys", "width": 1}, {"from": "Angie Qualls", "to": "JW", "width": 1}, {"from": "Ann H.", "to": "Joanne Mckenna Simoneau", "width": 1}, {"from": "yolanda hernandez", "to": "Ruby A. Judy", "width": 1}, {"from": "Cindy Reaux", "to": "Jacqueline Pendry", "width": 1}, {"from": "Amazon Customer", "to": "DumDum", "width": 9}, {"from": "Kristi Brown", "to": "DumDum", "width": 1}, {"from": "BB", "to": "incognito", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
